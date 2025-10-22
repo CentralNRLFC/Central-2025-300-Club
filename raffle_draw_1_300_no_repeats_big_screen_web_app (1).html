@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raffle Draw – 1–300 (No Repeats)</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --accent: #4ade80; /* green */
+      --accent-2: #60a5fa; /* blue */
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --danger: #f87171;
+      --warn: #fbbf24;
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1000px 600px at 70% -10%, #1f2937 0%, var(--bg) 60%);
+      color: var(--text); display: flex; flex-direction: column; gap: 16px;
+    }
+    header { padding: 12px 20px; display:flex; align-items: center; justify-content: space-between; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    header h1 { font-size: clamp(18px, 2vw, 28px); margin: 0; letter-spacing: 0.5px; font-weight: 700; }
+    .container { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; padding: 16px; flex: 1; }
+    .panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .big { display: grid; place-items: center; min-height: 46vh; border-radius: 12px; background: linear-gradient(180deg, #0e1627, #0a101d); border: 1px solid rgba(255,255,255,0.06); position: relative; }
+    .now { font-size: clamp(64px, 14vw, 220px); font-weight: 800; line-height: 1; letter-spacing: -2px; text-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .now.small { font-size: clamp(48px, 10vw, 160px); }
+    .sub { position: absolute; top: 12px; left: 16px; color: var(--muted); font-weight: 600; letter-spacing: .25px; font-size: 14px; }
+
+    .controls { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; align-items: end; }
+    .controls .field { display: grid; gap: 6px; }
+    label { font-size: 12px; color: var(--muted); }
+    input[type="number"], input[type="text"], select {
+      background: #0e1526; border: 1px solid rgba(255,255,255,0.08); color: var(--text);
+      padding: 10px 12px; border-radius: 10px; font-size: 14px; outline: none; width: 100%;
+    }
+    button {
+      background: #111827; color: var(--text); border: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 14px; border-radius: 12px; font-weight: 700; letter-spacing: .3px; cursor: pointer; transition: transform .04s ease, background .2s ease, opacity .2s ease;
+    }
+    button:hover { background: #0f172a; }
+    button:active { transform: translateY(1px); }
+    .primary { background: linear-gradient(180deg, #22c55e, #16a34a); border: none; color: #0a0f18; }
+    .primary:hover { filter: brightness(1.05); }
+    .ghost { background: transparent; border-color: rgba(255,255,255,0.2); }
+    .danger { background: linear-gradient(180deg, #ef4444, #dc2626); border: none; }
+    .warn { background: linear-gradient(180deg, #f59e0b, #d97706); border: none; }
+
+    .stack { display: grid; gap: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .stat { background: #0e1526; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 10px 12px; }
+    .stat .k { font-size: 12px; color: var(--muted); }
+    .stat .v { font-size: clamp(16px, 2.4vw, 28px); font-weight: 800; margin-top: 4px; }
+
+    .progress { height: 12px; background: #0d1322; border-radius: 999px; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+    .bar { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); width: 0%; transition: width .2s ease; }
+
+    .history { max-height: 58vh; overflow: auto; border-radius: 10px; background: #0b1323; border: 1px solid rgba(255,255,255,0.06); }
+    .history table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .history th, .history td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .history th { position: sticky; top: 0; background: #0d1629; text-align: left; font-weight: 700; }
+    .history tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+    footer { padding: 6px 16px 16px; color: var(--muted); font-size: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    @media (max-width: 980px) {
+      .container { grid-template-columns: 1fr; }
+      .now { font-size: clamp(64px, 24vw, 160px); }
+    }
+      .remaining { max-height: 26vh; overflow:auto; border-radius:10px; background: #0b1323; border:1px solid rgba(255,255,255,0.06); padding: 10px 12px; white-space: normal; word-wrap: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; line-height: 1.5; }
+      .remaining { max-height: 26vh; overflow:auto; border-radius:10px; background: #0b1323; border:1px solid rgba(255,255,255,0.06); padding: 10px 12px; white-space: normal; word-wrap: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; line-height: 1.5; }
+    .remaining.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; }
+    .chip { display:flex; align-items:center; justify-content:center; height:40px; border-radius:10px; background:#0e1526; border:1px solid rgba(255,255,255,0.08); font-weight:800; font-size:14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎉 Raffle Draw – No Repeats</h1>
+    <div class="row">
+      <button id="btn-fullscreen" class="ghost" title="Toggle Fullscreen">⤢ Full Screen</button>
+      <button id="btn-reset" class="danger" title="Reset the draw">Reset</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel stack">
+      <div class="controls">
+        <div class="field">
+          <label for="min">Min</label>
+          <input type="number" id="min" value="1" min="-999999" />
+        </div>
+        <div class="field">
+          <label for="max">Max</label>
+          <input type="number" id="max" value="300" max="9999999" />
+        </div>
+        <div class="field">
+          <label for="mode">Pick Mode</label>
+          <select id="mode">
+            <option value="random" selected>Random</option>
+            <option value="sequential">Sequential (1 → max)</option>
+            <option value="reverse">Sequential (max → 1)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="interval">Auto (ms)</label>
+          <input type="number" id="interval" value="0" min="0" step="100" />
+        </div>
+        <div class="field">
+          <label for="seed">Seed (optional)</label>
+          <input type="text" id="seed" placeholder="e.g. SCHOOL-FAIR-2025" />
+        </div>
+        <div class="field" style="align-self:end;">
+          <button id="btn-init" class="warn">Start New Draw</button>
+        </div>
+      </div>
+
+      <div class="big" aria-live="polite" aria-atomic="true">
+        <div class="sub">Current Draw</div>
+        <div id="current" class="now">—</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Total in Pool</div><div id="stat-total" class="v">0</div></div>
+        <div class="stat"><div class="k">Drawn</div><div id="stat-drawn" class="v">0</div></div>
+        <div class="stat"><div class="k">Remaining</div><div id="stat-rem" class="v">0</div></div>
+        <div class="stat"><div class="k">Last 5</div><div id="stat-last5" class="v">—</div></div>
+      </div>
+
+      <div class="stack">
+        <div class="progress" title="Remaining">
+          <div id="bar" class="bar" style="width:0%"></div>
+        </div>
+        <div class="row">
+          <button id="btn-draw" class="primary">Draw Next ▶</button>
+          <button id="btn-undo" class="ghost">Undo Last</button>
+          <button id="btn-export" class="ghost">Export CSV</button>
+          <button id="btn-autoplay" class="ghost">Auto: OFF</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel stack">
+      <h2 style="margin:0 0 6px 0; font-size:18px;">History</h2>
+      <div class="history" id="history">
+        <table>
+          <thead>
+            <tr><th style="width:80px;">#</th><th>Number Drawn</th><th style="width:160px;">Timestamp</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="align-items:center;justify-content:space-between;margin:16px 0 6px 0;">
+        <h2 style="margin:0; font-size:18px;">Remaining Numbers</h2>
+        <button id="btn-copy-remaining" class="ghost">Copy Remaining</button>
+      </div>
+      <div id="remaining" class="remaining grid" aria-live="polite" aria-atomic="true">—</div>
+      <footer>Tip: Use <strong>Full Screen</strong> and increase your browser zoom for a huge on‑stage display. Configure auto‑draw interval for dramatic pacing.</footer>
+    </aside>
+  </main>
+
+  <script>
+    // -------- Utility: seeded RNG (Mulberry32) for reproducibility --------
+    function xmur3(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= h >>> 16) >>> 0;
+      };
+    }
+    function mulberry32(a) {
+      return function() {
+        let t = (a += 0x6D2B79F5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // -------- State --------
+    let pool = [];
+    let drawn = [];
+    let rng = Math.random;
+    let timer = null;
+
+    // -------- DOM --------
+    const elMin = document.getElementById('min');
+    const elMax = document.getElementById('max');
+    const elMode = document.getElementById('mode');
+    const elSeed = document.getElementById('seed');
+    const elInterval = document.getElementById('interval');
+
+    const elInit = document.getElementById('btn-init');
+    const elDraw = document.getElementById('btn-draw');
+    const elUndo = document.getElementById('btn-undo');
+    const elExport = document.getElementById('btn-export');
+    const elAutoplay = document.getElementById('btn-autoplay');
+    const elReset = document.getElementById('btn-reset');
+    const elFullscreen = document.getElementById('btn-fullscreen');
+
+    const elCurrent = document.getElementById('current');
+    const elTotal = document.getElementById('stat-total');
+    const elDrawn = document.getElementById('stat-drawn');
+    const elRem = document.getElementById('stat-rem');
+    const elLast5 = document.getElementById('stat-last5');
+    const elBar = document.getElementById('bar');
+    const elTbody = document.getElementById('tbody');
+    const elRemaining = document.getElementById('remaining');
+    const elCopyRemaining = document.getElementById('btn-copy-remaining');
+
+    // -------- Functions --------
+    function initPool() {
+      const min = +elMin.value || 1;
+      const max = +elMax.value || 300;
+      if (max < min) { alert('Max must be ≥ Min.'); return; }
+      pool = [];
+      for (let n = min; n <= max; n++) pool.push(n);
+      drawn = [];
+      // RNG
+      const s = elSeed.value.trim();
+      if (s) { const seed32 = xmur3(s)(); rng = mulberry32(seed32); } else { rng = Math.random; }
+      // UI
+      elCurrent.textContent = '—';
+      renderStats();
+      renderRemaining();
+      renderHistory();
+      stopAuto();
+    }
+
+    function renderStats() {
+      elTotal.textContent = pool.length + drawn.length;
+      elDrawn.textContent = drawn.length;
+      elRem.textContent = pool.length;
+      const total = pool.length + drawn.length;
+      const pct = total ? (pool.length / total) * 100 : 0;
+      elBar.style.width = pct.toFixed(2) + '%';
+      const last5 = drawn.slice(-5).reverse().join(' · ');
+      elLast5.textContent = last5 || '—';
+    }
+
+    function renderRemaining() {
+      if (!elRemaining) return;
+      elRemaining.innerHTML = '';
+      if (!pool.length) { elRemaining.textContent = '—'; return; }
+      const rem = [...pool].sort((a,b)=>a-b);
+      for (const n of rem) {
+        const div = document.createElement('div');
+        div.className = 'chip';
+        div.textContent = n;
+        elRemaining.appendChild(div);
+      }
+    }
+
+    function drawOne() {
+      if (pool.length === 0) { elCurrent.textContent = 'DONE'; bounce(elCurrent); stopAuto(); return; }
+      let value = null;
+      const mode = elMode.value;
+      if (mode === 'random') {
+        const idx = Math.floor(rng() * pool.length);
+        value = pool.splice(idx, 1)[0];
+      } else if (mode === 'sequential') {
+        value = pool.shift();
+      } else { // reverse
+        value = pool.pop();
+      }
+      drawn.push(value);
+      elCurrent.textContent = value;
+      bounce(elCurrent);
+      appendHistoryRow(value, drawn.length);
+      renderStats();
+      renderRemaining();
+      scrollHistoryToEnd();
+    }
+
+    function undoLast() {
+      if (!drawn.length) return;
+      const last = drawn.pop();
+      // Return it in a way that preserves mode ordering for remaining draws
+      if (elMode.value === 'reverse') {
+        pool.push(last);
+      } else { // random or sequential → insert sorted to keep pool tidy
+        pool.push(last);
+        pool.sort((a,b)=>a-b);
+      }
+      elCurrent.textContent = '—';
+      renderStats();
+      renderRemaining();
+      renderHistory(true);
+    }
+
+    function renderHistory(full=false) {
+      if (full) {
+        elTbody.innerHTML = '';
+        drawn.forEach((num, i) => appendHistoryRow(num, i+1));
+      }
+    }
+
+    function appendHistoryRow(num, idx) {
+      const tr = document.createElement('tr');
+      const tdIdx = document.createElement('td');
+      const tdNum = document.createElement('td');
+      const tdTs = document.createElement('td');
+      tdIdx.textContent = idx;
+      tdNum.textContent = num;
+      tdNum.style.fontWeight = '800';
+      tdTs.textContent = new Date().toLocaleTimeString();
+      tr.appendChild(tdIdx); tr.appendChild(tdNum); tr.appendChild(tdTs);
+      elTbody.appendChild(tr);
+    }
+
+    function scrollHistoryToEnd() {
+      const wrap = document.getElementById('history');
+      wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function exportCSV() {
+      const min = +elMin.value || 1;
+      const max = +elMax.value || 300;
+      const header = 'index,number\n';
+      const rows = drawn.map((n,i)=>`${i+1},${n}`).join('\n');
+      const csv = header + rows;
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `raffle_${min}-${max}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleAuto() {
+      if (timer) { stopAuto(); return; }
+      const ms = Math.max(0, +elInterval.value || 0);
+      if (!ms) { drawOne(); return; }
+      elAutoplay.textContent = 'Auto: ON';
+      timer = setInterval(()=>{
+        if (pool.length === 0) { stopAuto(); return; }
+        drawOne();
+      }, ms);
+    }
+
+    function stopAuto() {
+      if (timer) clearInterval(timer);
+      timer = null;
+      elAutoplay.textContent = 'Auto: OFF';
+    }
+
+    function bounce(el) {
+      el.animate([
+        { transform: 'scale(0.96)' },
+        { transform: 'scale(1.0)' }
+      ], { duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    }
+
+    function copyRemaining() {
+      const rem = [...pool].sort((a,b)=>a-b);
+      const text = rem.join(', ');
+      navigator.clipboard?.writeText(text).then(()=>{
+        const old = elCopyRemaining.textContent;
+        elCopyRemaining.textContent = 'Copied!';
+        setTimeout(()=> elCopyRemaining.textContent = old, 1200);
+      }).catch(()=>{
+        alert(text);
+      });
+    }
+
+    // -------- Events --------
+    elInit.addEventListener('click', initPool);
+    elDraw.addEventListener('click', drawOne);
+    elUndo.addEventListener('click', undoLast);
+    elExport.addEventListener('click', exportCSV);
+    elAutoplay.addEventListener('click', toggleAuto);
+    elCopyRemaining?.addEventListener('click', copyRemaining);
+    elReset.addEventListener('click', ()=>{ if (confirm('Reset the draw?')) { pool=[]; drawn=[]; elCurrent.textContent='—'; renderStats(); elTbody.innerHTML=''; stopAuto(); } });
+    elFullscreen.addEventListener('click', toggleFullscreen);
+
+    // Init on load
+    initPool();
+  </script>
+</body>
+</html>
