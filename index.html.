@@ -21,6 +21,7 @@
   <div class="container">
     <div class="list-box">
       <h2>Remaining Numbers</h2>
+<div id="remainingCount"></div>
       <div class="number-list" id="remainingList"></div>
     </div>
     <div class="list-box">
